@@ -19,9 +19,9 @@ else:
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=40)
+    parser.add_argument('--batch_size', type=int, default=400)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=int, default=1e-5, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--noise_size', type=int, default=10)
     parser.add_argument('--GM', type=int, default=1000, help='middle size of Generator')
     parser.add_argument('--GO', type=int, default=2, help='out size of Generator')
@@ -76,8 +76,8 @@ def visualize(G, D, real_data, epoch, save_path):
     plt.axis('off')
     plt.imshow(out2np.reshape(200, 200), extent=[x_low, x_high, y_low, y_high], cmap='gray')
     plt.colorbar()
-    plt.scatter(real_data[:, 0], real_data[:, 1], c='b')
-    plt.scatter(fake_np[:, 0], fake_np[:, 1], c='r')
+    plt.scatter(real_data[:, 0], real_data[:, 1], c='b', s=10)
+    plt.scatter(fake_np[:, 0], fake_np[:, 1], c='r', s=10)
     g_path = os.path.join(save_path, 'Generator')
     if not os.path.exists(g_path):
         os.makedirs(g_path)
@@ -88,8 +88,10 @@ def train(type, dataset:Dataset):
     G = Generator(args.noise_size, args.GM, args.GO).to(device)
     D = Discriminator(args.GO, args.DM, 'gan').to(device)
 
-    optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
-    optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
+    # optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
+    optimizer_G = torch.optim.SGD(G.parameters(), lr=args.lr)
+    # optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
+    optimizer_D = torch.optim.SGD(D.parameters(), lr=args.lr)
     for epoch in range(args.epochs):
         G.train()
         D.train()
@@ -102,7 +104,7 @@ def train(type, dataset:Dataset):
             real_data = real_data.to(device)  # 真实的数据
             noise = torch.randn(real_data.size(0), args.noise_size).to(device)   # 随机噪声
             fake_data = G(noise).to(device)     # 生成的数据（假数据）
-            loss = -(torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))).mean()  # log(D(x)+log(1-D(G(z))))
+            loss = -torch.mean((torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))))  # log(D(x)+log(1-D(G(z))))
             loss.backward()
             loss_D += loss.item()
             optimizer_D.step()
@@ -110,14 +112,15 @@ def train(type, dataset:Dataset):
             # 更新G
             noise = torch.randn(args.batch_size, args.noise_size).to(device)  # 随机噪声
             fake_data = G(noise).to(device)  # 生成的数据（假数据）
-            loss = torch.log(torch.ones(args.batch_size).to(device) - D(fake_data)).mean() # log(1-D(G(z))))
+            loss = torch.mean(torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))) # log(1-D(G(z))))
             loss.backward()
             loss_G += loss.item()
             optimizer_G.step()
         loss_G /= len(train_set)
         loss_D /= len(train_set)
         print('Epoch  {}  loss_G: {:.6f}  loss_D: {:.6f}'.format(epoch + 1, loss_G, loss_D))
-        visualize(G, D, dataset.get_numpy_data(), epoch + 1, type)
+        if epoch % 5 == 0:
+            visualize(G, D, dataset.get_numpy_data(), epoch + 1, type)
 
 
 
