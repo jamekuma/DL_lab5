@@ -4,9 +4,9 @@ from torch.utils.data import Dataset
 from MyDataset import MyDataset
 from GAN import Discriminator, Generator
 import argparse
-import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 
