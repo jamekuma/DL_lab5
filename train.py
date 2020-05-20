@@ -5,6 +5,8 @@ from MyDataset import MyDataset
 from GAN import Discriminator, Generator
 import argparse
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import numpy as np
 import os
 
