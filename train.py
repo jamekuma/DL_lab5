@@ -99,9 +99,10 @@ def train(type, dataset:Dataset):
         loss_G_avg = 0.0
         loss_D_avg = 0.0
         for real_data in train_set:
-            optimizer_G.zero_grad()
-            optimizer_D.zero_grad()
+            
+            
             # 更新D
+            optimizer_D.zero_grad()
             real_data = real_data.to(device)  # 真实的数据
             noise = torch.randn(real_data.size(0), args.noise_size).to(device)   # 随机噪声
             fake_data = G(noise).to(device)     # 生成的数据（假数据）
@@ -112,6 +113,7 @@ def train(type, dataset:Dataset):
             loss_D_avg += loss_D.item()
 
             # 更新G
+            optimizer_G.zero_grad()
             noise = torch.randn(real_data.size(0), args.noise_size).to(device)  # 随机噪声
             fake_data = G(noise).to(device)  # 生成的数据（假数据）
             loss_G = (torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))).mean() # log(1-D(G(z))))
