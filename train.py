@@ -83,15 +83,16 @@ def visualize(G, D, real_data, epoch, save_path):
         os.makedirs(g_path)
     plt.savefig(os.path.join(g_path, 'epoch{}.png'.format(epoch)))
 
+
 def train(type, dataset:Dataset):
     train_set = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size)
     G = Generator(args.noise_size, args.GM, args.GO).to(device)
     D = Discriminator(args.GO, args.DM, 'gan').to(device)
 
-    optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
-    # optimizer_G = torch.optim.SGD(G.parameters(), lr=args.lr)
-    optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
-    # optimizer_D = torch.optim.SGD(D.parameters(), lr=args.lr)
+    # optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
+    optimizer_G = torch.optim.SGD(G.parameters(), lr=args.lr)
+    # optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
+    optimizer_D = torch.optim.SGD(D.parameters(), lr=args.lr)
     for epoch in range(args.epochs):
         G.train()
         D.train()
@@ -104,7 +105,8 @@ def train(type, dataset:Dataset):
             real_data = real_data.to(device)  # 真实的数据
             noise = torch.randn(real_data.size(0), args.noise_size).to(device)   # 随机噪声
             fake_data = G(noise).to(device)     # 生成的数据（假数据）
-            loss_D = -(torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))).mean()  # log(D(x)+log(1-D(G(z))))
+            # log(D(x)+log(1-D(G(z))))  注意fake_data这里不参加backward故detach
+            loss_D = -(torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data.detach()))).mean()
             loss_D.backward()
             optimizer_D.step()
             loss_D_avg += loss_D.item()
