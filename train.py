@@ -19,13 +19,13 @@ else:
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=400)
+    parser.add_argument('--batch_size', type=int, default=200)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
-    parser.add_argument('--noise_size', type=int, default=10)
-    parser.add_argument('--GM', type=int, default=1000, help='middle size of Generator')
+    parser.add_argument('--noise_size', type=int, default=2)
+    parser.add_argument('--GM', type=int, default=384, help='middle size of Generator')
     parser.add_argument('--GO', type=int, default=2, help='out size of Generator')
-    parser.add_argument('--DM', type=int, default=1000, help='middle size of Discriminator')
+    parser.add_argument('--DM', type=int, default=384, help='middle size of Discriminator')
     return parser.parse_args()
 
 
@@ -88,15 +88,15 @@ def train(type, dataset:Dataset):
     G = Generator(args.noise_size, args.GM, args.GO).to(device)
     D = Discriminator(args.GO, args.DM, 'gan').to(device)
 
-    # optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
-    optimizer_G = torch.optim.SGD(G.parameters(), lr=args.lr)
-    # optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
-    optimizer_D = torch.optim.SGD(D.parameters(), lr=args.lr)
+    optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
+    # optimizer_G = torch.optim.SGD(G.parameters(), lr=args.lr)
+    optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
+    # optimizer_D = torch.optim.SGD(D.parameters(), lr=args.lr)
     for epoch in range(args.epochs):
         G.train()
         D.train()
-        loss_G = 0.0
-        loss_D = 0.0
+        loss_G_avg = 0.0
+        loss_D_avg = 0.0
         for real_data in train_set:
             optimizer_G.zero_grad()
             optimizer_D.zero_grad()
@@ -104,21 +104,21 @@ def train(type, dataset:Dataset):
             real_data = real_data.to(device)  # 真实的数据
             noise = torch.randn(real_data.size(0), args.noise_size).to(device)   # 随机噪声
             fake_data = G(noise).to(device)     # 生成的数据（假数据）
-            loss = -torch.mean((torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))))  # log(D(x)+log(1-D(G(z))))
-            loss.backward()
-            loss_D += loss.item()
+            loss_D = -(torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))).mean()  # log(D(x)+log(1-D(G(z))))
+            loss_D.backward()
             optimizer_D.step()
+            loss_D_avg += loss_D.item()
 
             # 更新G
-            noise = torch.randn(args.batch_size, args.noise_size).to(device)  # 随机噪声
+            noise = torch.randn(real_data.size(0), args.noise_size).to(device)  # 随机噪声
             fake_data = G(noise).to(device)  # 生成的数据（假数据）
-            loss = torch.mean(torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))) # log(1-D(G(z))))
-            loss.backward()
-            loss_G += loss.item()
+            loss_G = (torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))).mean() # log(1-D(G(z))))
+            loss_G.backward()
             optimizer_G.step()
-        loss_G /= len(train_set)
-        loss_D /= len(train_set)
-        print('Epoch  {}  loss_G: {:.6f}  loss_D: {:.6f}'.format(epoch + 1, loss_G, loss_D))
+            loss_G_avg += loss_G.item()
+        loss_G_avg /= len(train_set)
+        loss_D_avg /= len(train_set)
+        print('Epoch  {}  loss_G: {:.6f}  loss_D: {:.6f}'.format(epoch + 1, loss_G_avg, loss_D_avg))
         if epoch % 5 == 0:
             visualize(G, D, dataset.get_numpy_data(), epoch + 1, type)
 
