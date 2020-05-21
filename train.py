@@ -20,16 +20,13 @@ else:
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=200)
+    parser.add_argument('--batch_size', type=int, default=100)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--noise_size', type=int, default=2)
-    parser.add_argument('--wgan_c', type=float, default=0.03)
+    parser.add_argument('--wgan_c', type=float, default=0.1)
     parser.add_argument('--type', type=str, default='gan')
     parser.add_argument('--opt', type=str, default='sgd')
-    parser.add_argument('--GM', type=int, default=384, help='middle size of Generator')
-    parser.add_argument('--GO', type=int, default=2, help='out size of Generator')
-    parser.add_argument('--DM', type=int, default=384, help='middle size of Discriminator')
     return parser.parse_args()
 
 
@@ -94,8 +91,8 @@ def visualize(G, D, real_data, epoch, save_path):
 def train(dataset:Dataset):
     writer = SummaryWriter(log_dir="./log" + '/' + args.type + '_' + args.opt + '_lr' + str(args.lr))
     train_set = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size)
-    G = Generator(args.noise_size, args.GM, args.GO).to(device)
-    D = Discriminator(args.GO, args.DM, args.type).to(device)
+    G = Generator(args.noise_size).to(device)
+    D = Discriminator(args.type).to(device)
 
     # optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
     # optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
@@ -112,39 +109,39 @@ def train(dataset:Dataset):
         loss_G_avg = 0.0
         loss_D_avg = 0.0
         for real_data in train_set:
-            
-            
             # 更新D
-            optimizer_D.zero_grad()
             real_data = real_data.to(device)  # 真实的数据
             noise = torch.randn(real_data.size(0), args.noise_size).to(device)   # 随机噪声
             fake_data = G(noise).to(device)     # 生成的数据（假数据）
             # log(D(x)+log(1-D(G(z))))  注意fake_data这里不参加backward故detach
             if args.type == 'wgan':
-                loss = -(D(real_data) - D(fake_data.detach())).mean()
+                loss_D = -(D(real_data) - D(fake_data.detach())).mean()
             else:
-                loss = -(torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data.detach()))).mean()
-            loss.backward()
+                loss_D = -(torch.log(D(real_data)) + torch.log(torch.ones(args.batch_size).to(device) - D(fake_data.detach()))).mean()
+            optimizer_D.zero_grad()
+            loss_D.backward()
             optimizer_D.step()
-            loss_D_avg += loss.item()
+            loss_D_avg += loss_D.item()
 
             # wgan则需截断参数
             if args.type == 'wgan':
                 for p in D.parameters():
                     p.data.clamp_(-args.wgan_c, args.wgan_c)
+            D.zero_grad()
 
 
             # 更新G
-            optimizer_G.zero_grad()
             noise = torch.randn(real_data.size(0), args.noise_size).to(device)  # 随机噪声
             fake_data = G(noise).to(device)  # 生成的数据（假数据）
             if args.type == 'wgan':
-                loss = - D(fake_data).mean()
+                loss_G = -D(fake_data).mean()
             else:
-                loss = (torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))).mean() # log(1-D(G(z))))
-            loss.backward()
+                loss_G = (torch.log(torch.ones(args.batch_size).to(device) - D(fake_data))).mean() # log(1-D(G(z))))
+            optimizer_G.zero_grad()
+            loss_G.backward()
             optimizer_G.step()
-            loss_G_avg += loss.item()
+            loss_G_avg += loss_G.item()
+            G.zero_grad()
         loss_G_avg /= len(train_set)
         loss_D_avg /= len(train_set)
         print('Epoch  {}  loss_G: {:.6f}  loss_D: {:.6f}'.format(epoch + 1, loss_G_avg, loss_D_avg))

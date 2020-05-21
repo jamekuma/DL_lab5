@@ -3,28 +3,25 @@ from torch import nn
 
 
 class Discriminator(nn.Module):
-    def __init__(self, in_size, middle_size, type='gan'):
+    def __init__(self, type='gan'):
         super(Discriminator, self).__init__()
-        if type == 'gan':
+        
+        if type == 'wgan':  # wgan去掉sigmoid层
             self.layers = nn.Sequential(
-                nn.Linear(in_size, middle_size),
-                nn.ReLU(True),
-                nn.Linear(middle_size, middle_size),
-                nn.ReLU(True),
-                nn.Linear(middle_size, middle_size),
-                nn.ReLU(True),
-                nn.Linear(middle_size, 1),  # 最后输出一维，判断是或否
-                nn.Sigmoid(),
+                nn.Linear(2, 256),
+                nn.ReLU(inplace=False),
+                nn.Linear(256,64),
+                nn.ReLU(inplace=False),
+                nn.Linear(64,1),
             )
-        elif type == 'wgan':  # wgan去掉sigmoid层
+        else :
             self.layers = nn.Sequential(
-                nn.Linear(in_size, middle_size),
-                nn.ReLU(True),
-                nn.Linear(middle_size, middle_size),
-                nn.ReLU(True),
-                nn.Linear(middle_size, middle_size),
-                nn.ReLU(True),
-                nn.Linear(middle_size, 1),  # 最后输出一维，判断是或否
+                nn.Linear(2,256),
+                nn.ReLU(inplace=False),
+                nn.Linear(256,64),
+                nn.ReLU(inplace=False),
+                nn.Linear(64,1),
+                nn.Sigmoid(),
             )
 
     def forward(self, x):
@@ -32,16 +29,14 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, in_size, middle_size, out_size):
+    def __init__(self, in_size):
         super(Generator, self).__init__()
         self.layers = nn.Sequential(
-            nn.Linear(in_size, middle_size),
-            nn.ReLU(True),
-            nn.Linear(middle_size, middle_size),
-            nn.ReLU(True),
-            nn.Linear(middle_size, middle_size),
-            nn.ReLU(True),
-            nn.Linear(middle_size, out_size)
+            nn.Linear(in_size, 256),
+            nn.ReLU(inplace=False),
+            nn.Linear(256, 64),
+            nn.ReLU(inplace=False),
+            nn.Linear(64, 2)
         )
 
     def forward(self, x):
