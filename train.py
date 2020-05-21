@@ -100,7 +100,7 @@ def train(dataset:Dataset):
     # optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr)
     # optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr)
     if args.opt == 'rms':
-        optimizer_G = torch.optim.RMSprop(D.parameters(), lr=args.lr)
+        optimizer_G = torch.optim.RMSprop(G.parameters(), lr=args.lr)
         optimizer_D = torch.optim.RMSprop(D.parameters(), lr=args.lr)
     else: # sgd
         optimizer_G = torch.optim.SGD(G.parameters(), lr=args.lr)
