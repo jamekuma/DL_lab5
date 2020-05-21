@@ -16,7 +16,7 @@ class Discriminator(nn.Module):
                 nn.Linear(middle_size, 1),  # 最后输出一维，判断是或否
                 nn.Sigmoid(),
             )
-        elif type == 'wgan':
+        elif type == 'wgan':  # wgan去掉sigmoid层
             self.layers = nn.Sequential(
                 nn.Linear(in_size, middle_size),
                 nn.ReLU(True),
