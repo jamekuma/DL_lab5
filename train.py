@@ -51,7 +51,8 @@ def visualize(G, D, real_data, epoch, save_path):
     # 画图需要用到的原始数据和生成数据的最大最小范围
     x_low, x_high = min(np.min(fake_np[:, 0]), -0.5), max(np.max(fake_np[:, 0]), 1.5)
     y_low, y_high = min(np.min(fake_np[:, 1]), 0), max(np.max(fake_np[:, 1]), 1)
-
+    # x_low, x_high = -0.5, 4
+    # y_low, y_high = -0.5, 4
     # 采样
     a_x = np.linspace(x_low, x_high, 200)
     a_y = np.linspace(y_low, y_high, 200)
@@ -78,11 +79,12 @@ def visualize(G, D, real_data, epoch, save_path):
     plt.cla()
     plt.clf()
     plt.axis('off')
+    # plt.figure(figsize=(5,5))
     plt.imshow(out2np.reshape(200, 200), extent=[x_low, x_high, y_low, y_high], cmap='gray')
     plt.colorbar()
     plt.scatter(real_data[:, 0], real_data[:, 1], c='b', s=10)
     plt.scatter(fake_np[:, 0], fake_np[:, 1], c='r', s=10)
-    plt.title('Epoch = ' + str(epoch + 1))
+    plt.title(args.type + ', ' + args.opt + ", " + "lr=" + str(args.lr) + ', Epoch = ' + str(epoch))
     g_path = os.path.join(save_path)
     if not os.path.exists(g_path):
         os.makedirs(g_path)
@@ -90,7 +92,7 @@ def visualize(G, D, real_data, epoch, save_path):
 
 
 def train(dataset:Dataset):
-    writer = SummaryWriter(log_dir="./log" + args.type + '_' + args.opt + '_lr' + str(args.lr))
+    writer = SummaryWriter(log_dir="./log" + '/' + args.type + '_' + args.opt + '_lr' + str(args.lr))
     train_set = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size)
     G = Generator(args.noise_size, args.GM, args.GO).to(device)
     D = Discriminator(args.GO, args.DM, args.type).to(device)
@@ -147,7 +149,7 @@ def train(dataset:Dataset):
         writer.add_scalar('train/D_loss', loss_D_avg, epoch + 1, walltime=epoch + 1)
         writer.flush()
         if (epoch + 1) % 10 == 0:
-            visualize(G, D, dataset.get_numpy_data(), epoch + 1, args.type + '/' + args.opt + '_lr' + args.lr)
+            visualize(G, D, dataset.get_numpy_data(), epoch + 1, args.type + '/' + args.opt + '_lr' + str(args.lr))
     writer.close()
 
 args = get_args()
